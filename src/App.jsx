@@ -1,26 +1,22 @@
-import { useState } from 'react'
+import React from 'react'
+import HeroSplineCover from './components/HeroSplineCover'
+import FeatureGrid from './components/FeatureGrid'
+import UploadPanel from './components/UploadPanel'
+import AnalysisTabs from './components/AnalysisTabs'
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-lg">
-        <h1 className="text-3xl font-bold text-gray-800 mb-4">
-          Vibe Coding Platform
-        </h1>
-        <p className="text-gray-600 mb-6">
-          Your AI-powered development environment
+    <div className="min-h-screen w-full bg-[#0b0b0c] font-['Inter','system-ui',sans-serif] text-white">
+      <HeroSplineCover />
+      <FeatureGrid />
+      <UploadPanel />
+      <AnalysisTabs />
+
+      <footer className="border-t border-white/10 bg-[#0b0b0c] py-8 text-center text-xs text-white/60">
+        <p>
+          AI Data Analytics Platform · Secure, conversational insights for everyone
         </p>
-        <div className="text-center">
-          <button
-            onClick={() => setCount(count + 1)}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
-          >
-            Count is {count}
-          </button>
-        </div>
-      </div>
+      </footer>
     </div>
   )
 }
