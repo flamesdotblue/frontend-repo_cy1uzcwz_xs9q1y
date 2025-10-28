@@ -1,6 +1,8 @@
 import React, { useRef, useState } from 'react'
 import { Upload, X } from 'lucide-react'
 
+const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
+
 // Lightweight CSV preview (no external deps). For demo only.
 const quickCsvParse = (text, limit = 100) => {
   const rows = text.split(/\r?\n/).filter(Boolean)
@@ -27,15 +29,18 @@ const detectTypes = (rows, header) => {
   return types
 }
 
-const UploadPanel = () => {
+const UploadPanel = ({ onDatasetCreated, datasetId }) => {
   const inputRef = useRef(null)
   const [fileName, setFileName] = useState('')
   const [preview, setPreview] = useState({ header: [], rows: [] })
   const [meta, setMeta] = useState(null)
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [successMsg, setSuccessMsg] = useState('')
 
   const onDrop = (file) => {
     setError('')
+    setSuccessMsg('')
     setFileName(file.name)
 
     const reader = new FileReader()
@@ -74,7 +79,36 @@ const UploadPanel = () => {
     setPreview({ header: [], rows: [] })
     setMeta(null)
     setError('')
+    setSuccessMsg('')
     if (inputRef.current) inputRef.current.value = ''
+    if (onDatasetCreated) onDatasetCreated('')
+  }
+
+  const sendToBackend = async () => {
+    if (!preview.header.length || !preview.rows.length) return
+    setLoading(true)
+    setError('')
+    setSuccessMsg('')
+    try {
+      const res = await fetch(`${API_BASE}/api/ingest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: fileName || 'uploaded-data',
+          header: preview.header,
+          rows: preview.rows,
+          total_rows: meta?.rowsCount || preview.rows.length,
+        }),
+      })
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`)
+      const data = await res.json()
+      onDatasetCreated?.(data.dataset_id)
+      setSuccessMsg('Uploaded to backend successfully')
+    } catch (e) {
+      setError(e.message || 'Failed to upload')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -98,7 +132,7 @@ const UploadPanel = () => {
               htmlFor="file-input"
               className="mb-3 block text-sm text-white/80"
             >
-              Supported: CSV, JSON (client-only demo)
+              Supported: CSV, JSON (client preview). Send to backend to persist.
             </label>
             <div className="rounded-lg border border-dashed border-white/15 p-6 text-center">
               <Upload className="mx-auto text-emerald-400" size={24} />
@@ -126,14 +160,28 @@ const UploadPanel = () => {
                   <p className="font-semibold">{meta.colsCount}</p>
                 </div>
                 <div className="rounded-md bg-white/5 p-3">
-                  <p className="text-white/60">Quality</p>
-                  <p className="font-semibold">Good</p>
+                  <p className="text-white/60">Status</p>
+                  <p className="font-semibold">{datasetId ? 'Sent' : 'Local'}</p>
                 </div>
               </div>
             )}
 
+            {(preview.header.length > 0) && (
+              <button
+                onClick={sendToBackend}
+                disabled={loading}
+                className="mt-4 w-full rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading ? 'Sending…' : (datasetId ? 'Re-send to Backend' : 'Send to Backend')}
+              </button>
+            )}
+
+            {successMsg && (
+              <p className="mt-3 rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-300">{successMsg}</p>
+            )}
+
             {error && (
-              <p className="mt-4 rounded-md bg-red-500/10 p-3 text-sm text-red-300">
+              <p className="mt-3 rounded-md bg-red-500/10 p-3 text-sm text-red-300">
                 {error}
               </p>
             )}
